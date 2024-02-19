@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 async function createDatabase() {
   try {
-    mongoose.connect("mongodb://localhost:27017/databasteknik-slutuppgift");
+    mongoose.connect("mongodb://127.0.0.1:27017/databasteknik-slutuppgift");
 
     // Creates supplier schema & model
     const supplierSchema = mongoose.Schema({
