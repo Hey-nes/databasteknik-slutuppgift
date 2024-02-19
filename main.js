@@ -1,6 +1,23 @@
 import mongoose, { connect } from "mongoose";
 import readline from "readline";
 
+// Schemas
+const CategorySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: String,
+});
+const Category = mongoose.model('Category', CategorySchema);
+
+const ProductSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+  price: { type: Number, required: true },
+  cost: { type: Number, required: true },
+  stock: { type: Number, required: true },
+  supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
+});
+const Product = mongoose.model('Product', ProductSchema);
+
 async function run() {
   await connect("mongodb://127.0.0.1:27017/databasteknik-slutuppgift");
 
@@ -9,7 +26,18 @@ async function run() {
     output: process.stdout,
   });
 
+
   // Functions go here
+   async function addCategory(rl) {
+    rl.question('Enter category name: ', async (name) => {
+      rl.question('Enter category description: ', async (description) => {
+        const category = new Category({ name, description });
+        await category.save();
+        console.log('Category added successfully!');
+        app();
+      });
+    });
+  }
 
   const app = () => {
     console.log("Menu:");
@@ -36,7 +64,7 @@ async function run() {
       switch (parseInt(input)) {
         case 1:
           console.log("You chose option 1.");
-          app();
+          addCategory(rl);
           break;
         case 2:
           console.log("You chose option 2.");
