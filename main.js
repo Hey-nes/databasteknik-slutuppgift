@@ -23,6 +23,19 @@ async function run() {
 
   // Functions go here
 
+
+ // Add Category
+  async function addCategory(rl) {
+  rl.question('Enter category name: ', async (name) => {
+    rl.question('Enter category description: ', async (description) => {
+      const category = new Category({ name, description });
+      await category.save();
+      console.log('Category added successfully!');
+      app(rl);
+    });
+  });
+}
+
   // View by category function
   const viewByCategory = async () => {
     try {
@@ -77,7 +90,7 @@ async function run() {
       switch (parseInt(input)) {
         case 1:
           console.log("You chose option 1.");
-          app();
+          addCategory(rl);
           break;
         case 2:
           console.log("You chose option 2.");
