@@ -1,15 +1,53 @@
 import mongoose, { Schema } from "mongoose";
 
+// Creates supplier schema & model
+export const supplierSchema = mongoose.Schema({
+  name: { type: String, required: true },
+  contact: { type: String, required: true },
+});
+export const Supplier = mongoose.model("Supplier", supplierSchema);
+
+// Creates product schema & model
+export const productSchema = mongoose.Schema({
+  name: { type: String, required: true },
+  category: { type: String, required: true },
+  price: { type: Number, required: true },
+  cost: { type: Number, required: true },
+  stock: { type: Number, required: true },
+  supplier: { type: Schema.Types.ObjectId, ref: "Supplier" },
+});
+export const Product = mongoose.model("Product", productSchema);
+
+// Creates categories schema & model
+export const categorySchema = mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+});
+export const Category = mongoose.model("Category", categorySchema);
+
+// Creates offers schema & model
+export const offerSchema = mongoose.Schema({
+  products: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+  price: { type: Number, required: true },
+  active: { type: Boolean, default: true },
+});
+export const Offer = mongoose.model("Offer", offerSchema);
+
+// Creates sales order schema & model
+export const salesOrderSchema = mongoose.Schema({
+  offer: { type: Schema.Types.ObjectId, ref: "Offer" },
+  quantity: { type: Number, required: true },
+  status: {
+    type: String,
+    enum: ["pending", "shipped"],
+    default: "pending",
+  },
+});
+export const SalesOrder = mongoose.model("SalesOrder", salesOrderSchema);
+
 async function createDatabase() {
   try {
     mongoose.connect("mongodb://127.0.0.1:27017/databasteknik-slutuppgift");
-
-    // Creates supplier schema & model
-    const supplierSchema = mongoose.Schema({
-      name: { type: String, required: true },
-      contact: { type: String, required: true },
-    });
-    const Supplier = mongoose.model("Supplier", supplierSchema);
 
     // Adds suppliers data, inserts data
     const suppliersData = [
@@ -23,17 +61,6 @@ async function createDatabase() {
       },
     ];
     const createdSuppliers = await Supplier.insertMany(suppliersData);
-
-    // Creates product schema & model
-    const productSchema = mongoose.Schema({
-      name: { type: String, required: true },
-      category: { type: String, required: true },
-      price: { type: Number, required: true },
-      cost: { type: Number, required: true },
-      stock: { type: Number, required: true },
-      supplier: { type: Schema.Types.ObjectId, ref: "Supplier" },
-    });
-    const Product = mongoose.model("Product", productSchema);
 
     // Adds product data, inserts data
     const productsData = [
@@ -88,13 +115,6 @@ async function createDatabase() {
     ];
     const createdProducts = await Product.insertMany(productsData);
 
-    // Creates categories schema & model
-    const categorySchema = mongoose.Schema({
-      name: { type: String, required: true },
-      description: { type: String },
-    });
-    const Category = mongoose.model("Category", categorySchema);
-
     // Adds categories data, inserts data
     const categoriesData = [
       {
@@ -120,14 +140,6 @@ async function createDatabase() {
     ];
     const createdCategories = await Category.insertMany(categoriesData);
 
-    // Creates offers schema & model
-    const offerSchema = mongoose.Schema({
-      products: [{ type: Schema.Types.ObjectId, ref: "Product" }],
-      price: { type: Number, required: true },
-      active: { type: Boolean, default: true },
-    });
-    const Offer = mongoose.model("Offer", offerSchema);
-
     // Adds offers data, inserts data
     const offersData = [
       {
@@ -152,18 +164,6 @@ async function createDatabase() {
     ];
     const createdOffers = await Offer.insertMany(offersData);
 
-    // Creates sales order schema & model
-    const salesOrderSchema = mongoose.Schema({
-      offer: { type: Schema.Types.ObjectId, ref: "Offer" },
-      quantity: { type: Number, required: true },
-      status: {
-        type: String,
-        enum: ["pending", "shipped"],
-        default: "pending",
-      },
-    });
-    const SalesOrder = mongoose.model("SalesOrder", salesOrderSchema);
-
     // Adds sales order data, inserts data
     const salesOrdersData = [
       {
@@ -187,4 +187,6 @@ async function createDatabase() {
   }
 }
 
-createDatabase();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  createDatabase();
+}

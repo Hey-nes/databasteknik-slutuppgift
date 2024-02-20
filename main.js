@@ -1,5 +1,17 @@
 import mongoose, { connect } from "mongoose";
 import readline from "readline";
+import {
+  supplierSchema,
+  Supplier,
+  productSchema,
+  Product,
+  categorySchema,
+  Category,
+  offerSchema,
+  Offer,
+  salesOrderSchema,
+  SalesOrder,
+} from "./create-database.js";
 
 async function run() {
   await connect("mongodb://127.0.0.1:27017/databasteknik-slutuppgift");
@@ -10,6 +22,9 @@ async function run() {
   });
 
   // Functions go here
+  const viewByCategory = async () => {
+    console.log(categorySchema);
+  };
 
   const app = () => {
     console.log("Menu:");
@@ -43,7 +58,7 @@ async function run() {
           app();
           break;
         case 3:
-          console.log("You chose option 3.");
+          viewByCategory();
           app();
           break;
         case 4:
@@ -93,7 +108,7 @@ async function run() {
       }
     });
   };
-  
+
   app();
 }
 
