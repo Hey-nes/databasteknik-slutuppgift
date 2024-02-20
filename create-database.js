@@ -1,4 +1,6 @@
 import mongoose, { Schema } from "mongoose";
+import { fileURLToPath } from "url";
+import { resolve } from "path";
 
 // Creates supplier schema & model
 export const supplierSchema = mongoose.Schema({
@@ -6,6 +8,13 @@ export const supplierSchema = mongoose.Schema({
   contact: { type: String, required: true },
 });
 export const Supplier = mongoose.model("Supplier", supplierSchema);
+
+// Creates categories schema & model
+export const categorySchema = mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+});
+export const Category = mongoose.model("Category", categorySchema);
 
 // Creates product schema & model
 export const productSchema = mongoose.Schema({
@@ -17,13 +26,6 @@ export const productSchema = mongoose.Schema({
   supplier: { type: Schema.Types.ObjectId, ref: "Supplier" },
 });
 export const Product = mongoose.model("Product", productSchema);
-
-// Creates categories schema & model
-export const categorySchema = mongoose.Schema({
-  name: { type: String, required: true },
-  description: { type: String },
-});
-export const Category = mongoose.model("Category", categorySchema);
 
 // Creates offers schema & model
 export const offerSchema = mongoose.Schema({
@@ -61,6 +63,31 @@ async function createDatabase() {
       },
     ];
     const createdSuppliers = await Supplier.insertMany(suppliersData);
+
+    // Adds categories data, inserts data
+    const categoriesData = [
+      {
+        name: "Electronics",
+        description: "Products related to electronics.",
+      },
+      {
+        name: "Clothing",
+        description: "Products related to clothing.",
+      },
+      {
+        name: "Home Appliances",
+        description: "Products related to home appliances.",
+      },
+      {
+        name: "Beauty & Personal Care",
+        description: "Products related to home beauty & personal care.",
+      },
+      {
+        name: "Sports & Outdoors",
+        description: "Products related to sports & outdoors.",
+      },
+    ];
+    const createdCategories = await Category.insertMany(categoriesData);
 
     // Adds product data, inserts data
     const productsData = [
@@ -115,31 +142,6 @@ async function createDatabase() {
     ];
     const createdProducts = await Product.insertMany(productsData);
 
-    // Adds categories data, inserts data
-    const categoriesData = [
-      {
-        name: "Electronics",
-        description: "Products related to electronics.",
-      },
-      {
-        name: "Clothing",
-        description: "Products related to clothing.",
-      },
-      {
-        name: "Home Appliances",
-        description: "Products related to home appliances.",
-      },
-      {
-        name: "Beauty & Personal Care",
-        description: "Products related to home beauty & personal care.",
-      },
-      {
-        name: "Sports & Outdoors",
-        description: "Products related to sports & outdoors.",
-      },
-    ];
-    const createdCategories = await Category.insertMany(categoriesData);
-
     // Adds offers data, inserts data
     const offersData = [
       {
@@ -187,6 +189,12 @@ async function createDatabase() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Convert the import.meta.url to a file path
+const filename = fileURLToPath(import.meta.url);
+
+// Resolve the path to the script being executed
+const scriptPath = resolve(process.argv[1]);
+
+if (filename === scriptPath) {
   createDatabase();
 }

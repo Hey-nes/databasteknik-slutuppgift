@@ -22,8 +22,34 @@ async function run() {
   });
 
   // Functions go here
+
+  // View by category function
   const viewByCategory = async () => {
-    console.log(categorySchema);
+    try {
+      const categories = await Product.distinct("category");
+      console.log("List of categories: ");
+      categories.forEach((category) => {
+        console.log(category);
+      });
+    } catch {
+      console.error("Error fetching categories: ", error);
+    }
+    rl.question("Please select a category: ", async (category) => {
+      try {
+        const selectedCategory = await Product.findOne({ category: category });
+        if (!selectedCategory) {
+          console.log("Category not found!");
+          app();
+          return;
+        }
+        console.log(`You selected: ${category}`);
+      } catch {}
+    });
+  };
+
+  // View by supplier function
+  const viewBySupplier = async () => {
+    console.log(supplierSchema);
   };
 
   const app = () => {
@@ -59,10 +85,9 @@ async function run() {
           break;
         case 3:
           viewByCategory();
-          app();
           break;
         case 4:
-          console.log("You chose option 4.");
+          viewBySupplier();
           app();
           break;
         case 5:
