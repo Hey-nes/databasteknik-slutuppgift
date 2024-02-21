@@ -1,5 +1,17 @@
 import mongoose, { connect } from "mongoose";
 import readline from "readline";
+import {
+  supplierSchema,
+  Supplier,
+  productSchema,
+  Product,
+  categorySchema,
+  Category,
+  offerSchema,
+  Offer,
+  salesOrderSchema,
+  SalesOrder,
+} from "./create-database.js";
 
 // Schemas
 const CategorySchema = new mongoose.Schema({
@@ -39,6 +51,204 @@ async function run() {
     });
   }
 
+
+ // Add Category
+  async function addCategory(rl) {
+  rl.question('Enter category name: ', async (name) => {
+    rl.question('Enter category description: ', async (description) => {
+      const category = new Category({ name, description });
+      await category.save();
+      console.log('Category added successfully!');
+      app(rl);
+    });
+  });
+}
+
+// Add product
+async function addProduct(rl) {
+  rl.question('Enter product name: ', (name) => {
+    rl.question('Enter product category: ', (category) => {
+      rl.question('Enter product price: ', (price) => {
+        rl.question('Enter product cost: ', (cost) => {
+          rl.question('Enter product stock: ', (stock) => {
+            rl.question('Enter supplier name: ', async (supplierName) => {
+              try {
+                const supplier = await Supplier.findOne({ name: supplierName });
+                if (!supplier) {
+                  console.log('Supplier not found!');
+                  app(rl);
+                  return;
+                }
+                const product = new Product({
+                  name,
+                  category,
+                  price: parseFloat(price),
+                  cost: parseFloat(cost),
+                  stock: parseInt(stock, 10),
+                  supplier: supplier._id,
+                });
+                await product.save();
+                console.log('Product added successfully!');
+                app(rl);
+              } catch (error) {
+                console.error('Error adding product:', error);
+                app(rl);
+              }
+            });
+          });
+        });
+      });
+    });
+  });
+}
+
+  // View by category function
+  const viewByCategory = async () => {
+    try {
+      const categories = await Product.distinct("category");
+      console.log("List of categories: ");
+      categories.forEach((category) => {
+        console.log(category);
+      });
+    } catch (error) {
+      console.error("Error fetching categories: ", error);
+    }
+
+    rl.question(
+      "Please select a category (case sensitive): ",
+      async (category) => {
+        category = category.trim();
+        try {
+          const products = await Product.find({ category: category });
+          if (products.length === 0) {
+            console.log("No products found for the selected category.");
+            viewByCategory();
+            return;
+          }
+          console.log(`Products with category ${category}:`);
+          products.forEach((product) => {
+            console.log(product.name);
+          });
+          app();
+          return;
+        } catch (error) {
+          console.error("Error fetching products: ", error);
+        }
+      }
+    );
+  };
+
+  // View by supplier function
+  const viewBySupplier = async () => {
+    try {
+      const suppliers = await Supplier.find({}, "name");
+      console.log("List of suppliers: ");
+      suppliers.forEach((supplier) => {
+        console.log(supplier.name);
+      });
+    } catch (error) {
+      console.error("Error fetching suppliers: ", error);
+    }
+
+    rl.question("Please select a supplier (case sensitive): ", async (selectedSupplierName) => {
+      selectedSupplierName = selectedSupplierName.trim();
+      try {
+        const selectedSupplier = await Supplier.findOne({
+          name: selectedSupplierName,
+        });
+        if (!selectedSupplier) {
+          console.log("Selected supplier not found.");
+          viewBySupplier();
+          return;
+        }
+
+        const products = await Product.find({ supplier: selectedSupplier._id });
+        if (products.length === 0) {
+          console.log("No products found for the selected supplier.");
+          viewBySupplier();
+          return;
+        }
+
+        console.log(`Products with supplier: ${selectedSupplierName}`);
+        products.forEach((product) => {
+          console.log(product.name);
+        });
+        app();
+        return;
+      } catch (error) {
+        console.error("Error fetching products: ", error);
+      }
+    });
+  };
+
+ // View all offers within a price range
+
+ async function viewOffersWithinPriceRange(rl) {
+  rl.question('Enter minimum price: ', (minPrice) => {
+    rl.question('Enter maximum price: ', async (maxPrice) => {
+      try {
+        const offers = await Offer.find({
+          price: { $gte: parseFloat(minPrice), $lte: parseFloat(maxPrice) }
+        }).populate('products');
+
+        if (offers.length === 0) {
+          console.log(`No offers found within the price range of ${minPrice} to ${maxPrice}.`);
+        } else {
+          console.log(`Offers found within the price range of ${minPrice} to ${maxPrice}:`);
+          offers.forEach((offer, index) => {
+            console.log(`Offer ${index + 1}: Price - ${offer.price}`);
+            console.log('Included products:');
+            offer.products.forEach((product, productIndex) => {
+              console.log(`\tProduct ${productIndex + 1}: Name - ${product.name}, Category - ${product.category}, Price - ${product.price}`);
+            });
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching offers within price range:', error);
+      } finally {
+        app(rl); 
+      }
+    });
+  });
+}
+
+// View all offers that contain a product from a specific category
+
+async function viewOffersByCategory(rl) {
+  rl.question('Enter the category name: ', async (categoryName) => {
+    try {
+      // Find products by category
+      const products = await Product.find({ category: categoryName }).exec();
+      if (products.length === 0) {
+        console.log(`No products found in the category: ${categoryName}`);
+        app(rl);
+        return;
+      }
+      // Extract product IDs
+      const productIds = products.map(product => product._id);
+      // Find offers that include any of the products
+      const offers = await Offer.find({ products: { $in: productIds } })
+        .populate('products')
+        .exec();
+      if (offers.length === 0) {
+        console.log(`No offers found containing products from the category: ${categoryName}`);
+      } else {
+        console.log(`Offers containing products from the category: ${categoryName}`);
+        offers.forEach((offer, index) => {
+          console.log(`Offer ${index + 1}: Price - ${offer.price}, Active - ${offer.active ? 'Yes' : 'No'}`);
+          offer.products.forEach((product, productIndex) => {
+            console.log(`\tProduct ${productIndex + 1}: Name - ${product.name}, Category - ${product.category}, Price - ${product.price}`);
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching offers by category:', error);
+    } finally {
+      app(rl);
+    }
+  });
+}
+
   const app = () => {
     console.log("Menu:");
     console.log("1. Add new category");
@@ -68,23 +278,21 @@ async function run() {
           break;
         case 2:
           console.log("You chose option 2.");
-          app();
+          addProduct(rl);
           break;
         case 3:
-          console.log("You chose option 3.");
-          app();
+          viewByCategory();
           break;
         case 4:
-          console.log("You chose option 4.");
-          app();
+          viewBySupplier();
           break;
         case 5:
           console.log("You chose option 5.");
-          app();
+          viewOffersWithinPriceRange(rl);
           break;
         case 6:
           console.log("You chose option 6.");
-          app();
+          viewOffersByCategory(rl);
           break;
         case 7:
           console.log("You chose option 7.");
@@ -121,7 +329,7 @@ async function run() {
       }
     });
   };
-  
+
   app();
 }
 
