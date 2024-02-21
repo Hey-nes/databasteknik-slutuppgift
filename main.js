@@ -36,6 +36,44 @@ async function run() {
   });
 }
 
+// Add product
+async function addProduct(rl) {
+  rl.question('Enter product name: ', (name) => {
+    rl.question('Enter product category: ', (category) => {
+      rl.question('Enter product price: ', (price) => {
+        rl.question('Enter product cost: ', (cost) => {
+          rl.question('Enter product stock: ', (stock) => {
+            rl.question('Enter supplier name: ', async (supplierName) => {
+              try {
+                const supplier = await Supplier.findOne({ name: supplierName });
+                if (!supplier) {
+                  console.log('Supplier not found!');
+                  app(rl);
+                  return;
+                }
+                const product = new Product({
+                  name,
+                  category,
+                  price: parseFloat(price),
+                  cost: parseFloat(cost),
+                  stock: parseInt(stock, 10),
+                  supplier: supplier._id,
+                });
+                await product.save();
+                console.log('Product added successfully!');
+                app(rl);
+              } catch (error) {
+                console.error('Error adding product:', error);
+                app(rl);
+              }
+            });
+          });
+        });
+      });
+    });
+  });
+}
+
   // View by category function
   const viewByCategory = async () => {
     try {
@@ -144,7 +182,7 @@ async function run() {
           break;
         case 2:
           console.log("You chose option 2.");
-          app();
+          addProduct(rl);
           break;
         case 3:
           viewByCategory();
