@@ -31,25 +31,75 @@ async function run() {
       categories.forEach((category) => {
         console.log(category);
       });
-    } catch {
+    } catch (error) {
       console.error("Error fetching categories: ", error);
     }
-    rl.question("Please select a category: ", async (category) => {
-      try {
-        const selectedCategory = await Product.findOne({ category: category });
-        if (!selectedCategory) {
-          console.log("Category not found!");
+
+    rl.question(
+      "Please select a category (case sensitive): ",
+      async (category) => {
+        category = category.trim();
+        try {
+          const products = await Product.find({ category: category });
+          if (products.length === 0) {
+            console.log("No products found for the selected category.");
+            viewByCategory();
+            return;
+          }
+          console.log(`Products with category ${category}:`);
+          products.forEach((product) => {
+            console.log(product.name);
+          });
           app();
           return;
+        } catch (error) {
+          console.error("Error fetching products: ", error);
         }
-        console.log(`You selected: ${category}`);
-      } catch {}
-    });
+      }
+    );
   };
 
   // View by supplier function
   const viewBySupplier = async () => {
-    console.log(supplierSchema);
+    try {
+      const suppliers = await Supplier.find({}, "name");
+      console.log("List of suppliers (case sensitive): ");
+      suppliers.forEach((supplier) => {
+        console.log(supplier.name);
+      });
+    } catch (error) {
+      console.error("Error fetching suppliers: ", error);
+    }
+
+    rl.question("Please select a supplier: ", async (selectedSupplierName) => {
+      selectedSupplierName = selectedSupplierName.trim();
+      try {
+        const selectedSupplier = await Supplier.findOne({
+          name: selectedSupplierName,
+        });
+        if (!selectedSupplier) {
+          console.log("Selected supplier not found.");
+          viewBySupplier();
+          return;
+        }
+
+        const products = await Product.find({ supplier: selectedSupplier._id });
+        if (products.length === 0) {
+          console.log("No products found for the selected supplier.");
+          viewBySupplier();
+          return;
+        }
+
+        console.log(`Products with supplier: ${selectedSupplierName}`);
+        products.forEach((product) => {
+          console.log(product.name);
+        });
+        app();
+        return;
+      } catch (error) {
+        console.error("Error fetching products: ", error);
+      }
+    });
   };
 
   const app = () => {
@@ -88,7 +138,6 @@ async function run() {
           break;
         case 4:
           viewBySupplier();
-          app();
           break;
         case 5:
           console.log("You chose option 5.");
