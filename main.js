@@ -63,7 +63,7 @@ async function run() {
   const viewBySupplier = async () => {
     try {
       const suppliers = await Supplier.find({}, "name");
-      console.log("List of suppliers (case sensitive): ");
+      console.log("List of suppliers: ");
       suppliers.forEach((supplier) => {
         console.log(supplier.name);
       });
@@ -71,7 +71,7 @@ async function run() {
       console.error("Error fetching suppliers: ", error);
     }
 
-    rl.question("Please select a supplier: ", async (selectedSupplierName) => {
+    rl.question("Please select a supplier (case sensitive): ", async (selectedSupplierName) => {
       selectedSupplierName = selectedSupplierName.trim();
       try {
         const selectedSupplier = await Supplier.findOne({
