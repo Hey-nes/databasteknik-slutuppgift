@@ -153,6 +153,37 @@ async function addProduct(rl) {
     });
   };
 
+ // View all offers within a price range
+
+ async function viewOffersWithinPriceRange(rl) {
+  rl.question('Enter minimum price: ', (minPrice) => {
+    rl.question('Enter maximum price: ', async (maxPrice) => {
+      try {
+        const offers = await Offer.find({
+          price: { $gte: parseFloat(minPrice), $lte: parseFloat(maxPrice) }
+        }).populate('products');
+
+        if (offers.length === 0) {
+          console.log(`No offers found within the price range of ${minPrice} to ${maxPrice}.`);
+        } else {
+          console.log(`Offers found within the price range of ${minPrice} to ${maxPrice}:`);
+          offers.forEach((offer, index) => {
+            console.log(`Offer ${index + 1}: Price - ${offer.price}`);
+            console.log('Included products:');
+            offer.products.forEach((product, productIndex) => {
+              console.log(`\tProduct ${productIndex + 1}: Name - ${product.name}, Category - ${product.category}, Price - ${product.price}`);
+            });
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching offers within price range:', error);
+      } finally {
+        app(rl); 
+      }
+    });
+  });
+}
+
   const app = () => {
     console.log("Menu:");
     console.log("1. Add new category");
@@ -192,7 +223,7 @@ async function addProduct(rl) {
           break;
         case 5:
           console.log("You chose option 5.");
-          app();
+          viewOffersWithinPriceRange(rl);
           break;
         case 6:
           console.log("You chose option 6.");
