@@ -84,35 +84,68 @@ async function run() {
       console.error("Error fetching suppliers: ", error);
     }
 
-    rl.question("Please select a supplier (case sensitive): ", async (selectedSupplierName) => {
-      selectedSupplierName = selectedSupplierName.trim();
-      try {
-        const selectedSupplier = await Supplier.findOne({
-          name: selectedSupplierName,
-        });
-        if (!selectedSupplier) {
-          console.log("Selected supplier not found.");
-          viewBySupplier();
-          return;
-        }
+    rl.question(
+      "Please select a supplier (case sensitive): ",
+      async (selectedSupplierName) => {
+        selectedSupplierName = selectedSupplierName.trim();
+        try {
+          const selectedSupplier = await Supplier.findOne({
+            name: selectedSupplierName,
+          });
+          if (!selectedSupplier) {
+            console.log("Selected supplier not found.");
+            viewBySupplier();
+            return;
+          }
 
-        const products = await Product.find({ supplier: selectedSupplier._id });
-        if (products.length === 0) {
-          console.log("No products found for the selected supplier.");
-          viewBySupplier();
-          return;
-        }
+          const products = await Product.find({
+            supplier: selectedSupplier._id,
+          });
+          if (products.length === 0) {
+            console.log("No products found for the selected supplier.");
+            viewBySupplier();
+            return;
+          }
 
-        console.log(`Products with supplier: ${selectedSupplierName}`);
-        products.forEach((product) => {
-          console.log(product.name);
-        });
-        app();
-        return;
-      } catch (error) {
-        console.error("Error fetching products: ", error);
+          console.log(`Products with supplier: ${selectedSupplierName}`);
+          products.forEach((product) => {
+            console.log(product.name);
+          });
+          app();
+          return;
+        } catch (error) {
+          console.error("Error fetching products: ", error);
+        }
       }
+    );
+  };
+
+  // Add new supplier
+  const addSupplier = async () => {
+    rl.question("Enter the name of the new supplier: ", (name) => {
+      rl.question(
+        "Enter the e-mail address of the new supplier: ",
+        (contact) => {
+          const newSupplier = new Supplier({
+            name: name,
+            contact: contact,
+          });
+
+          newSupplier
+            .save()
+            .then((savedSupplier) => {
+              console.log("New supplier added successfully:");
+              console.log(savedSupplier);
+              app();
+            })
+            .catch((error) => {
+              console.error("Error adding new supplier:", error);
+              app();
+            });
+        }
+      );
     });
+    app();
   };
 
   const app = () => {
@@ -177,8 +210,7 @@ async function run() {
           app();
           break;
         case 11:
-          console.log("You chose option 11.");
-          app();
+          addSupplier();
           break;
         case 12:
           console.log("You chose option 12.");
