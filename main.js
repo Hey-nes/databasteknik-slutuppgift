@@ -13,22 +13,6 @@ import {
   SalesOrder,
 } from "./create-database.js";
 
-// Schemas
-const CategorySchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: String,
-});
-const Category = mongoose.model('Category', CategorySchema);
-
-const ProductSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
-  price: { type: Number, required: true },
-  cost: { type: Number, required: true },
-  stock: { type: Number, required: true },
-  supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
-});
-const Product = mongoose.model('Product', ProductSchema);
 
 async function run() {
   await connect("mongodb://127.0.0.1:27017/databasteknik-slutuppgift");
