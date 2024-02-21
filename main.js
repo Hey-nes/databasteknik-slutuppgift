@@ -184,6 +184,43 @@ async function addProduct(rl) {
   });
 }
 
+// View all offers that contain a product from a specific category
+
+async function viewOffersByCategory(rl) {
+  rl.question('Enter the category name: ', async (categoryName) => {
+    try {
+      // Find products by category
+      const products = await Product.find({ category: categoryName }).exec();
+      if (products.length === 0) {
+        console.log(`No products found in the category: ${categoryName}`);
+        app(rl);
+        return;
+      }
+      // Extract product IDs
+      const productIds = products.map(product => product._id);
+      // Find offers that include any of the products
+      const offers = await Offer.find({ products: { $in: productIds } })
+        .populate('products')
+        .exec();
+      if (offers.length === 0) {
+        console.log(`No offers found containing products from the category: ${categoryName}`);
+      } else {
+        console.log(`Offers containing products from the category: ${categoryName}`);
+        offers.forEach((offer, index) => {
+          console.log(`Offer ${index + 1}: Price - ${offer.price}, Active - ${offer.active ? 'Yes' : 'No'}`);
+          offer.products.forEach((product, productIndex) => {
+            console.log(`\tProduct ${productIndex + 1}: Name - ${product.name}, Category - ${product.category}, Price - ${product.price}`);
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching offers by category:', error);
+    } finally {
+      app(rl);
+    }
+  });
+}
+
   const app = () => {
     console.log("Menu:");
     console.log("1. Add new category");
@@ -227,7 +264,7 @@ async function addProduct(rl) {
           break;
         case 6:
           console.log("You chose option 6.");
-          app();
+          viewOffersByCategory(rl);
           break;
         case 7:
           console.log("You chose option 7.");
