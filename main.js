@@ -13,7 +13,6 @@ import {
   SalesOrder,
 } from "./create-database.js";
 
-
 async function run() {
   await connect("mongodb://127.0.0.1:27017/databasteknik-slutuppgift");
 
@@ -22,69 +21,59 @@ async function run() {
     output: process.stdout,
   });
 
-
   // Functions go here
-   async function addCategory(rl) {
-    rl.question('Enter category name: ', async (name) => {
-      rl.question('Enter category description: ', async (description) => {
+
+  // Add category
+  async function addCategory(rl) {
+    rl.question("Enter category name: ", async (name) => {
+      rl.question("Enter category description: ", async (description) => {
         const category = new Category({ name, description });
         await category.save();
-        console.log('Category added successfully!');
-        app();
+        console.log("Category added successfully!");
+        app(rl);
       });
     });
   }
 
-
- // Add Category
-  async function addCategory(rl) {
-  rl.question('Enter category name: ', async (name) => {
-    rl.question('Enter category description: ', async (description) => {
-      const category = new Category({ name, description });
-      await category.save();
-      console.log('Category added successfully!');
-      app(rl);
-    });
-  });
-}
-
-// Add product
-async function addProduct(rl) {
-  rl.question('Enter product name: ', (name) => {
-    rl.question('Enter product category: ', (category) => {
-      rl.question('Enter product price: ', (price) => {
-        rl.question('Enter product cost: ', (cost) => {
-          rl.question('Enter product stock: ', (stock) => {
-            rl.question('Enter supplier name: ', async (supplierName) => {
-              try {
-                const supplier = await Supplier.findOne({ name: supplierName });
-                if (!supplier) {
-                  console.log('Supplier not found!');
+  // Add product
+  async function addProduct(rl) {
+    rl.question("Enter product name: ", (name) => {
+      rl.question("Enter product category: ", (category) => {
+        rl.question("Enter product price: ", (price) => {
+          rl.question("Enter product cost: ", (cost) => {
+            rl.question("Enter product stock: ", (stock) => {
+              rl.question("Enter supplier name: ", async (supplierName) => {
+                try {
+                  const supplier = await Supplier.findOne({
+                    name: supplierName,
+                  });
+                  if (!supplier) {
+                    console.log("Supplier not found!");
+                    app(rl);
+                    return;
+                  }
+                  const product = new Product({
+                    name,
+                    category,
+                    price: parseFloat(price),
+                    cost: parseFloat(cost),
+                    stock: parseInt(stock, 10),
+                    supplier: supplier._id,
+                  });
+                  await product.save();
+                  console.log("Product added successfully!");
                   app(rl);
-                  return;
+                } catch (error) {
+                  console.error("Error adding product:", error);
+                  app(rl);
                 }
-                const product = new Product({
-                  name,
-                  category,
-                  price: parseFloat(price),
-                  cost: parseFloat(cost),
-                  stock: parseInt(stock, 10),
-                  supplier: supplier._id,
-                });
-                await product.save();
-                console.log('Product added successfully!');
-                app(rl);
-              } catch (error) {
-                console.error('Error adding product:', error);
-                app(rl);
-              }
+              });
             });
           });
         });
       });
     });
-  });
-}
+  }
 
   // View by category function
   const viewByCategory = async () => {
@@ -170,6 +159,92 @@ async function addProduct(rl) {
     );
   };
 
+  // View all offers within a price range
+  async function viewOffersWithinPriceRange(rl) {
+    rl.question("Enter minimum price: ", (minPrice) => {
+      rl.question("Enter maximum price: ", async (maxPrice) => {
+        try {
+          const offers = await Offer.find({
+            price: { $gte: parseFloat(minPrice), $lte: parseFloat(maxPrice) },
+          }).populate("products");
+
+          if (offers.length === 0) {
+            console.log(
+              `No offers found within the price range of ${minPrice} to ${maxPrice}.`
+            );
+          } else {
+            console.log(
+              `Offers found within the price range of ${minPrice} to ${maxPrice}:`
+            );
+            offers.forEach((offer, index) => {
+              console.log(`Offer ${index + 1}: Price - ${offer.price}`);
+              console.log("Included products:");
+              offer.products.forEach((product, productIndex) => {
+                console.log(
+                  `\tProduct ${productIndex + 1}: Name - ${
+                    product.name
+                  }, Category - ${product.category}, Price - ${product.price}`
+                );
+              });
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching offers within price range:", error);
+        } finally {
+          app(rl);
+        }
+      });
+    });
+  }
+
+  // View all offers that contain a product from a specific category
+  async function viewOffersByCategory(rl) {
+    rl.question("Enter the category name: ", async (categoryName) => {
+      try {
+        // Find products by category
+        const products = await Product.find({ category: categoryName }).exec();
+        if (products.length === 0) {
+          console.log(`No products found in the category: ${categoryName}`);
+          app(rl);
+          return;
+        }
+        // Extract product IDs
+        const productIds = products.map((product) => product._id);
+        // Find offers that include any of the products
+        const offers = await Offer.find({ products: { $in: productIds } })
+          .populate("products")
+          .exec();
+        if (offers.length === 0) {
+          console.log(
+            `No offers found containing products from the category: ${categoryName}`
+          );
+        } else {
+          console.log(
+            `Offers containing products from the category: ${categoryName}`
+          );
+          offers.forEach((offer, index) => {
+            console.log(
+              `Offer ${index + 1}: Price - ${offer.price}, Active - ${
+                offer.active ? "Yes" : "No"
+              }`
+            );
+            offer.products.forEach((product, productIndex) => {
+              console.log(
+                `\tProduct ${productIndex + 1}: Name - ${
+                  product.name
+                }, Category - ${product.category}, Price - ${product.price}`
+              );
+            });
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching offers by category:", error);
+      } finally {
+        app(rl);
+      }
+    });
+  }
+
   // Add new supplier
   const addSupplier = async () => {
     rl.question("Enter the name of the new supplier: ", (name) => {
@@ -198,73 +273,8 @@ async function addProduct(rl) {
     app();
   };
 
- // View all offers within a price range
-
- async function viewOffersWithinPriceRange(rl) {
-  rl.question('Enter minimum price: ', (minPrice) => {
-    rl.question('Enter maximum price: ', async (maxPrice) => {
-      try {
-        const offers = await Offer.find({
-          price: { $gte: parseFloat(minPrice), $lte: parseFloat(maxPrice) }
-        }).populate('products');
-
-        if (offers.length === 0) {
-          console.log(`No offers found within the price range of ${minPrice} to ${maxPrice}.`);
-        } else {
-          console.log(`Offers found within the price range of ${minPrice} to ${maxPrice}:`);
-          offers.forEach((offer, index) => {
-            console.log(`Offer ${index + 1}: Price - ${offer.price}`);
-            console.log('Included products:');
-            offer.products.forEach((product, productIndex) => {
-              console.log(`\tProduct ${productIndex + 1}: Name - ${product.name}, Category - ${product.category}, Price - ${product.price}`);
-            });
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching offers within price range:', error);
-      } finally {
-        app(rl); 
-      }
-    });
-  });
-}
-
-// View all offers that contain a product from a specific category
-
-async function viewOffersByCategory(rl) {
-  rl.question('Enter the category name: ', async (categoryName) => {
-    try {
-      // Find products by category
-      const products = await Product.find({ category: categoryName }).exec();
-      if (products.length === 0) {
-        console.log(`No products found in the category: ${categoryName}`);
-        app(rl);
-        return;
-      }
-      // Extract product IDs
-      const productIds = products.map(product => product._id);
-      // Find offers that include any of the products
-      const offers = await Offer.find({ products: { $in: productIds } })
-        .populate('products')
-        .exec();
-      if (offers.length === 0) {
-        console.log(`No offers found containing products from the category: ${categoryName}`);
-      } else {
-        console.log(`Offers containing products from the category: ${categoryName}`);
-        offers.forEach((offer, index) => {
-          console.log(`Offer ${index + 1}: Price - ${offer.price}, Active - ${offer.active ? 'Yes' : 'No'}`);
-          offer.products.forEach((product, productIndex) => {
-            console.log(`\tProduct ${productIndex + 1}: Name - ${product.name}, Category - ${product.category}, Price - ${product.price}`);
-          });
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching offers by category:', error);
-    } finally {
-      app(rl);
-    }
-  });
-}
+  // View suppliers
+  const viewSuppliers = async () => {};
 
   const app = () => {
     console.log("Menu:");
@@ -331,8 +341,7 @@ async function viewOffersByCategory(rl) {
           addSupplier();
           break;
         case 12:
-          console.log("You chose option 12.");
-          app();
+          viewSuppliers();
           break;
         case 13:
           console.log("You chose option 13.");
