@@ -290,6 +290,50 @@ async function run() {
       });
   };
 
+  // View sales orders
+  const viewSalesOrders = async () => {
+    try {
+      const orders = await SalesOrder.find({}).populate({
+        path: "offer",
+        populate: {
+          path: "products",
+          model: "Product",
+        },
+      });
+
+      if (orders.length === 0) {
+        console.log("No orders found.");
+        app();
+        return;
+      }
+
+      console.log("Orders:");
+      orders.forEach(async (order) => {
+        let totalCost = 0;
+
+        if (order.offer) {
+          order.offer.products.forEach((product) => {
+            totalCost += product.price;
+          });
+        } else {
+          const products = await Product.find({ _id: { $in: order.products } });
+          products.forEach((product) => {
+            totalCost += product.price;
+          });
+        }
+
+        console.log(`Order number: ${order._id}`);
+        console.log(`Order status: ${order.status}`);
+        console.log(`Total cost: ${totalCost}`);
+      });
+
+      app();
+    } catch (error) {
+      console.error("Error retrieving orders: ", error);
+      app();
+    }
+  };
+
   const app = () => {
     console.log("Menu:");
     console.log("1. Add new category");
@@ -358,8 +402,7 @@ async function run() {
           viewSuppliers();
           break;
         case 13:
-          console.log("You chose option 13.");
-          app();
+          viewSalesOrders();
           break;
         case 14:
           console.log("You chose option 14.");
