@@ -35,45 +35,50 @@ async function run() {
     });
   }
 
-  // Add product
-  async function addProduct(rl) {
-    rl.question("Enter product name: ", (name) => {
-      rl.question("Enter product category: ", (category) => {
-        rl.question("Enter product price: ", (price) => {
-          rl.question("Enter product cost: ", (cost) => {
-            rl.question("Enter product stock: ", (stock) => {
-              rl.question("Enter supplier name: ", async (supplierName) => {
-                try {
-                  const supplier = await Supplier.findOne({
-                    name: supplierName,
-                  });
+    // Add product with supplier check
+    async function addProduct(rl) {
+      rl.question('Enter product name: ', (name) => {
+        rl.question('Enter product category: ', (category) => {
+          rl.question('Enter product price: ', (price) => {
+            rl.question('Enter product cost: ', (cost) => {
+              rl.question('Enter product stock: ', (stock) => {
+                rl.question('Enter supplier name: ', async (supplierName) => {
+                  let supplier = await Supplier.findOne({ name: supplierName });
                   if (!supplier) {
-                    console.log("Supplier not found!");
+                    console.log('Supplier not found! Adding new supplier...');
+                    await addSupplier(supplierName, rl, async (newSupplier) => {
+                      const product = new Product({
+                        name,
+                        category,
+                        price: parseFloat(price),
+                        cost: parseFloat(cost),
+                        stock: parseInt(stock, 10),
+                        supplier: newSupplier._id,
+                      });
+                      await product.save();
+                      console.log('Product added successfully with new supplier!');
+                      app(rl);
+                    });
+                  } else {
+                    const product = new Product({
+                      name,
+                      category,
+                      price: parseFloat(price),
+                      cost: parseFloat(cost),
+                      stock: parseInt(stock, 10),
+                      supplier: supplier._id,
+                    });
+                    await product.save();
+                    console.log('Product added successfully!');
                     app(rl);
-                    return;
                   }
-                  const product = new Product({
-                    name,
-                    category,
-                    price: parseFloat(price),
-                    cost: parseFloat(cost),
-                    stock: parseInt(stock, 10),
-                    supplier: supplier._id,
-                  });
-                  await product.save();
-                  console.log("Product added successfully!");
-                  app(rl);
-                } catch (error) {
-                  console.error("Error adding product:", error);
-                  app(rl);
-                }
+                });
               });
             });
           });
         });
       });
-    });
-  }
+    }
 
   // View by category function
   const viewByCategory = async () => {
@@ -245,32 +250,72 @@ async function run() {
     });
   }
 
-  // Add new supplier
-  const addSupplier = async () => {
-    rl.question("Enter the name of the new supplier: ", (name) => {
-      rl.question(
-        "Enter the e-mail address of the new supplier: ",
-        (contact) => {
-          const newSupplier = new Supplier({
-            name: name,
-            contact: contact,
-          });
+  // Create order for products
 
-          newSupplier
-            .save()
-            .then((savedSupplier) => {
-              console.log("New supplier added successfully:");
-              console.log(savedSupplier);
-              app();
-            })
-            .catch((error) => {
-              console.error("Error adding new supplier:", error);
-              app();
-            });
-        }
-      );
+  const createOrderForProducts = async (rl) => {
+    console.log("Fetching products...");
+    const products = await Product.find({}).populate('supplier');
+
+    products.forEach((product, index) => {
+      console.log(`${index + 1}: ${product.name} - Price: ${product.price}, Stock: ${product.stock}`);
     });
-    app();
+
+    rl.question("Choose a product by entering the number: ", async (productNumber) => {
+      const productIndex = parseInt(productNumber, 10) - 1;
+
+      if (productIndex >= 0 && productIndex < products.length) {
+        const selectedProduct = products[productIndex];
+
+        rl.question("Enter quantity: ", async (quantity) => {
+          const orderQuantity = parseInt(quantity, 10);
+          // Check for discount eligibility
+          const priceAdjustmentFactor = orderQuantity > 10 ? 0.9 : 1; // 10% discount if more than 10
+          const totalPrice = selectedProduct.price * orderQuantity * priceAdjustmentFactor;
+
+          if (orderQuantity > 0 && orderQuantity <= selectedProduct.stock) {
+            const totalPrice = orderQuantity * selectedProduct.price;
+            // Apply a discount if the order quantity is more than 10
+            const finalPrice = orderQuantity > 10 ? totalPrice * 0.9 : totalPrice;
+
+            const order = new SalesOrder({
+              product: selectedProduct._id,
+              quantity: orderQuantity,
+              status: "pending", // Default status pending
+              totalPrice: finalPrice,
+            });
+
+            await order.save();
+            console.log(`Order for ${orderQuantity} x ${selectedProduct.name} at total price $${finalPrice.toFixed(2)} created successfully.`);
+
+          } else {
+            console.log("Invalid quantity. Ensure it does not exceed available stock.");
+          }
+          app();
+        });
+      } else {
+        console.log("Invalid product selection.");
+        app();
+      }
+    });
+  };
+
+  // Modified addSupplier to accept parameters and callback for adding a product
+  const addSupplier = async (supplierName, rl, callback) => {
+    rl.question(`Enter the e-mail address for ${supplierName}: `, async (contact) => {
+      const newSupplier = new Supplier({
+        name: supplierName,
+        contact,
+      });
+
+      try {
+        const savedSupplier = await newSupplier.save();
+        console.log("New supplier added successfully:", savedSupplier);
+        callback(savedSupplier); // Proceed to callback with the new supplier
+      } catch (error) {
+        console.error("Error adding new supplier:", error);
+        app(rl);
+      }
+    });
   };
 
   // View suppliers
@@ -385,7 +430,7 @@ async function run() {
           break;
         case 8:
           console.log("You chose option 8.");
-          app();
+          createOrderForProducts(rl);
           break;
         case 9:
           console.log("You chose option 9.");
@@ -396,7 +441,13 @@ async function run() {
           app();
           break;
         case 11:
-          addSupplier();
+          console.log("You chose option 11 to add a new supplier.");
+          rl.question("Enter the name of the new supplier: ", (supplierName) => {
+            addSupplier(supplierName, rl, () => {
+              console.log("Supplier added to database");
+              app(rl);
+            });
+          });
           break;
         case 12:
           viewSuppliers();
