@@ -35,50 +35,50 @@ async function run() {
     });
   }
 
-    // Add product with supplier check
-    async function addProduct(rl) {
-      rl.question('Enter product name: ', (name) => {
-        rl.question('Enter product category: ', (category) => {
-          rl.question('Enter product price: ', (price) => {
-            rl.question('Enter product cost: ', (cost) => {
-              rl.question('Enter product stock: ', (stock) => {
-                rl.question('Enter supplier name: ', async (supplierName) => {
-                  let supplier = await Supplier.findOne({ name: supplierName });
-                  if (!supplier) {
-                    console.log('Supplier not found! Adding new supplier...');
-                    await addSupplier(supplierName, rl, async (newSupplier) => {
-                      const product = new Product({
-                        name,
-                        category,
-                        price: parseFloat(price),
-                        cost: parseFloat(cost),
-                        stock: parseInt(stock, 10),
-                        supplier: newSupplier._id,
-                      });
-                      await product.save();
-                      console.log('Product added successfully with new supplier!');
-                      app(rl);
-                    });
-                  } else {
+  // Add product with supplier check
+  async function addProduct(rl) {
+    rl.question('Enter product name: ', (name) => {
+      rl.question('Enter product category: ', (category) => {
+        rl.question('Enter product price: ', (price) => {
+          rl.question('Enter product cost: ', (cost) => {
+            rl.question('Enter product stock: ', (stock) => {
+              rl.question('Enter supplier name: ', async (supplierName) => {
+                let supplier = await Supplier.findOne({ name: supplierName });
+                if (!supplier) {
+                  console.log('Supplier not found! Adding new supplier...');
+                  await addSupplier(supplierName, rl, async (newSupplier) => {
                     const product = new Product({
                       name,
                       category,
                       price: parseFloat(price),
                       cost: parseFloat(cost),
                       stock: parseInt(stock, 10),
-                      supplier: supplier._id,
+                      supplier: newSupplier._id,
                     });
                     await product.save();
-                    console.log('Product added successfully!');
+                    console.log('Product added successfully with new supplier!');
                     app(rl);
-                  }
-                });
+                  });
+                } else {
+                  const product = new Product({
+                    name,
+                    category,
+                    price: parseFloat(price),
+                    cost: parseFloat(cost),
+                    stock: parseInt(stock, 10),
+                    supplier: supplier._id,
+                  });
+                  await product.save();
+                  console.log('Product added successfully!');
+                  app(rl);
+                }
               });
             });
           });
         });
       });
-    }
+    });
+  }
 
   // View by category function
   const viewByCategory = async () => {
@@ -186,8 +186,7 @@ async function run() {
               console.log("Included products:");
               offer.products.forEach((product, productIndex) => {
                 console.log(
-                  `\tProduct ${productIndex + 1}: Name - ${
-                    product.name
+                  `\tProduct ${productIndex + 1}: Name - ${product.name
                   }, Category - ${product.category}, Price - ${product.price}`
                 );
               });
@@ -229,14 +228,12 @@ async function run() {
           );
           offers.forEach((offer, index) => {
             console.log(
-              `Offer ${index + 1}: Price - ${offer.price}, Active - ${
-                offer.active ? "Yes" : "No"
+              `Offer ${index + 1}: Price - ${offer.price}, Active - ${offer.active ? "Yes" : "No"
               }`
             );
             offer.products.forEach((product, productIndex) => {
               console.log(
-                `\tProduct ${productIndex + 1}: Name - ${
-                  product.name
+                `\tProduct ${productIndex + 1}: Name - ${product.name
                 }, Category - ${product.category}, Price - ${product.price}`
               );
             });
@@ -250,6 +247,36 @@ async function run() {
     });
   }
 
+// // viewOffersBasedOnStock
+const viewOffersBasedOnStock = async () => {
+
+  const offers = await Offer.find().populate('products');
+
+  let allInStock = 0, someInStock = 0, noneInStock = 0;
+
+  offers.forEach((offer, index) => {
+    const productStocks = offer.products.map(product => product.stock);
+    const totalStock = productStocks.reduce((acc, stock) => acc + stock, 0); 
+    const fullyStocked = productStocks.every(stock => stock === 200); 
+    const outOfStock = productStocks.every(stock => stock === 0); 
+    const someStock = productStocks.some(stock => stock > 0 && stock < 200); 
+  
+    if (fullyStocked) {
+      allInStock++;
+    } else if (outOfStock) {
+      noneInStock++;
+    } else if (someStock) {
+      someInStock++;
+    }
+
+    console.log(`Offer ${index + 1}: Total stock available is ${totalStock}.`);
+  });
+
+  console.log(`Offers with all products in stock: ${allInStock}`);
+  console.log(`Offers with some products in stock: ${someInStock}`);
+  console.log(`Offers with no products in stock: ${noneInStock}`);
+  app();
+};
   // Create order for products
 
   const createOrderForProducts = async (rl) => {
@@ -294,6 +321,46 @@ async function run() {
         });
       } else {
         console.log("Invalid product selection.");
+        app();
+      }
+    });
+  };
+
+
+  // Create order for offers
+
+  const createOfferOrder = async (rl) => {
+    console.log("Fetching active offers...");
+    const offers = await Offer.find({ active: true }).populate('products');
+
+    offers.forEach((offer, index) => {
+      console.log(`${index + 1}: Offer Price: ${offer.price} - Products in Offer: ${offer.products.map(p => p.name).join(', ')}`);
+    });
+
+    rl.question("Choose an offer by entering the number: ", async (offerNumber) => {
+      const offerIndex = parseInt(offerNumber, 10) - 1;
+
+      if (offerIndex >= 0 && offerIndex < offers.length) {
+        const selectedOffer = offers[offerIndex];
+
+        rl.question("Enter quantity: ", async (quantity) => {
+          const orderQuantity = parseInt(quantity, 10);
+          if (orderQuantity > 0) {
+            const order = new SalesOrder({
+              offer: selectedOffer._id,
+              quantity: orderQuantity,
+              status: "pending",
+            });
+
+            await order.save();
+            console.log(`Order for ${orderQuantity} x [Offer Price: ${selectedOffer.price}] created successfully.`);
+          } else {
+            console.log("Invalid quantity.");
+          }
+          app();
+        });
+      } else {
+        console.log("Invalid offer selection.");
         app();
       }
     });
@@ -426,7 +493,7 @@ async function run() {
           break;
         case 7:
           console.log("You chose option 7.");
-          app();
+          viewOffersBasedOnStock();
           break;
         case 8:
           console.log("You chose option 8.");
@@ -434,7 +501,7 @@ async function run() {
           break;
         case 9:
           console.log("You chose option 9.");
-          app();
+          createOfferOrder(rl);
           break;
         case 10:
           console.log("You chose option 10.");
