@@ -274,7 +274,21 @@ async function run() {
   };
 
   // View suppliers
-  const viewSuppliers = async () => {};
+  const viewSuppliers = async () => {
+    Supplier.find({})
+      .then((suppliers) => {
+        console.log("Suppliers:");
+        suppliers.forEach((supplier) => {
+          console.log(`Name: ${supplier.name}`);
+          console.log(`Contact: ${supplier.contact}`);
+        });
+        app();
+      })
+      .catch((error) => {
+        console.error("Error retreiving suppliers: ", error);
+        app();
+      });
+  };
 
   const app = () => {
     console.log("Menu:");
