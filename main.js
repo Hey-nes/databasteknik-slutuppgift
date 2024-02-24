@@ -37,15 +37,15 @@ async function run() {
 
   // Add product with supplier check
   async function addProduct(rl) {
-    rl.question('Enter product name: ', (name) => {
-      rl.question('Enter product category: ', (category) => {
-        rl.question('Enter product price: ', (price) => {
-          rl.question('Enter product cost: ', (cost) => {
-            rl.question('Enter product stock: ', (stock) => {
-              rl.question('Enter supplier name: ', async (supplierName) => {
+    rl.question("Enter product name: ", (name) => {
+      rl.question("Enter product category: ", (category) => {
+        rl.question("Enter product price: ", (price) => {
+          rl.question("Enter product cost: ", (cost) => {
+            rl.question("Enter product stock: ", (stock) => {
+              rl.question("Enter supplier name: ", async (supplierName) => {
                 let supplier = await Supplier.findOne({ name: supplierName });
                 if (!supplier) {
-                  console.log('Supplier not found! Adding new supplier...');
+                  console.log("Supplier not found! Adding new supplier...");
                   await addSupplier(supplierName, rl, async (newSupplier) => {
                     const product = new Product({
                       name,
@@ -56,7 +56,9 @@ async function run() {
                       supplier: newSupplier._id,
                     });
                     await product.save();
-                    console.log('Product added successfully with new supplier!');
+                    console.log(
+                      "Product added successfully with new supplier!"
+                    );
                     app(rl);
                   });
                 } else {
@@ -69,7 +71,7 @@ async function run() {
                     supplier: supplier._id,
                   });
                   await product.save();
-                  console.log('Product added successfully!');
+                  console.log("Product added successfully!");
                   app(rl);
                 }
               });
@@ -186,7 +188,8 @@ async function run() {
               console.log("Included products:");
               offer.products.forEach((product, productIndex) => {
                 console.log(
-                  `\tProduct ${productIndex + 1}: Name - ${product.name
+                  `\tProduct ${productIndex + 1}: Name - ${
+                    product.name
                   }, Category - ${product.category}, Price - ${product.price}`
                 );
               });
@@ -228,12 +231,14 @@ async function run() {
           );
           offers.forEach((offer, index) => {
             console.log(
-              `Offer ${index + 1}: Price - ${offer.price}, Active - ${offer.active ? "Yes" : "No"
+              `Offer ${index + 1}: Price - ${offer.price}, Active - ${
+                offer.active ? "Yes" : "No"
               }`
             );
             offer.products.forEach((product, productIndex) => {
               console.log(
-                `\tProduct ${productIndex + 1}: Name - ${product.name
+                `\tProduct ${productIndex + 1}: Name - ${
+                  product.name
                 }, Category - ${product.category}, Price - ${product.price}`
               );
             });
@@ -247,142 +252,174 @@ async function run() {
     });
   }
 
-// // viewOffersBasedOnStock
-const viewOffersBasedOnStock = async () => {
+  // View offers based on stock
+  const viewOffersBasedOnStock = async () => {
+    const offers = await Offer.find().populate("products");
 
-  const offers = await Offer.find().populate('products');
-
-  let allInStock = 0, someInStock = 0, noneInStock = 0;
-
-  offers.forEach((offer, index) => {
-    const productStocks = offer.products.map(product => product.stock);
-    const totalStock = productStocks.reduce((acc, stock) => acc + stock, 0); 
-    const fullyStocked = productStocks.every(stock => stock === 200); 
-    const outOfStock = productStocks.every(stock => stock === 0); 
-    const someStock = productStocks.some(stock => stock > 0 && stock < 200); 
-  
-    if (fullyStocked) {
-      allInStock++;
-    } else if (outOfStock) {
-      noneInStock++;
-    } else if (someStock) {
-      someInStock++;
-    }
-
-    console.log(`Offer ${index + 1}: Total stock available is ${totalStock}.`);
-  });
-
-  console.log(`Offers with all products in stock: ${allInStock}`);
-  console.log(`Offers with some products in stock: ${someInStock}`);
-  console.log(`Offers with no products in stock: ${noneInStock}`);
-  app();
-};
-  // Create order for products
-
-  const createOrderForProducts = async (rl) => {
-    console.log("Fetching products...");
-    const products = await Product.find({}).populate('supplier');
-
-    products.forEach((product, index) => {
-      console.log(`${index + 1}: ${product.name} - Price: ${product.price}, Stock: ${product.stock}`);
-    });
-
-    rl.question("Choose a product by entering the number: ", async (productNumber) => {
-      const productIndex = parseInt(productNumber, 10) - 1;
-
-      if (productIndex >= 0 && productIndex < products.length) {
-        const selectedProduct = products[productIndex];
-
-        rl.question("Enter quantity: ", async (quantity) => {
-          const orderQuantity = parseInt(quantity, 10);
-          // Check for discount eligibility
-          const priceAdjustmentFactor = orderQuantity > 10 ? 0.9 : 1; // 10% discount if more than 10
-          const totalPrice = selectedProduct.price * orderQuantity * priceAdjustmentFactor;
-
-          if (orderQuantity > 0 && orderQuantity <= selectedProduct.stock) {
-            const totalPrice = orderQuantity * selectedProduct.price;
-            // Apply a discount if the order quantity is more than 10
-            const finalPrice = orderQuantity > 10 ? totalPrice * 0.9 : totalPrice;
-
-            const order = new SalesOrder({
-              product: selectedProduct._id,
-              quantity: orderQuantity,
-              status: "pending", // Default status pending
-              totalPrice: finalPrice,
-            });
-
-            await order.save();
-            console.log(`Order for ${orderQuantity} x ${selectedProduct.name} at total price $${finalPrice.toFixed(2)} created successfully.`);
-
-          } else {
-            console.log("Invalid quantity. Ensure it does not exceed available stock.");
-          }
-          app();
-        });
-      } else {
-        console.log("Invalid product selection.");
-        app();
-      }
-    });
-  };
-
-
-  // Create order for offers
-
-  const createOfferOrder = async (rl) => {
-    console.log("Fetching active offers...");
-    const offers = await Offer.find({ active: true }).populate('products');
+    let allInStock = 0,
+      someInStock = 0,
+      noneInStock = 0;
 
     offers.forEach((offer, index) => {
-      console.log(`${index + 1}: Offer Price: ${offer.price} - Products in Offer: ${offer.products.map(p => p.name).join(', ')}`);
-    });
+      const productStocks = offer.products.map((product) => product.stock);
+      const totalStock = productStocks.reduce((acc, stock) => acc + stock, 0);
+      const fullyStocked = productStocks.every((stock) => stock === 200);
+      const outOfStock = productStocks.every((stock) => stock === 0);
+      const someStock = productStocks.some((stock) => stock > 0 && stock < 200);
 
-    rl.question("Choose an offer by entering the number: ", async (offerNumber) => {
-      const offerIndex = parseInt(offerNumber, 10) - 1;
-
-      if (offerIndex >= 0 && offerIndex < offers.length) {
-        const selectedOffer = offers[offerIndex];
-
-        rl.question("Enter quantity: ", async (quantity) => {
-          const orderQuantity = parseInt(quantity, 10);
-          if (orderQuantity > 0) {
-            const order = new SalesOrder({
-              offer: selectedOffer._id,
-              quantity: orderQuantity,
-              status: "pending",
-            });
-
-            await order.save();
-            console.log(`Order for ${orderQuantity} x [Offer Price: ${selectedOffer.price}] created successfully.`);
-          } else {
-            console.log("Invalid quantity.");
-          }
-          app();
-        });
-      } else {
-        console.log("Invalid offer selection.");
-        app();
+      if (fullyStocked) {
+        allInStock++;
+      } else if (outOfStock) {
+        noneInStock++;
+      } else if (someStock) {
+        someInStock++;
       }
+
+      console.log(
+        `Offer ${index + 1}: Total stock available is ${totalStock}.`
+      );
     });
+
+    console.log(`Offers with all products in stock: ${allInStock}`);
+    console.log(`Offers with some products in stock: ${someInStock}`);
+    console.log(`Offers with no products in stock: ${noneInStock}`);
+    app();
   };
 
-  // Modified addSupplier to accept parameters and callback for adding a product
-  const addSupplier = async (supplierName, rl, callback) => {
-    rl.question(`Enter the e-mail address for ${supplierName}: `, async (contact) => {
-      const newSupplier = new Supplier({
-        name: supplierName,
-        contact,
-      });
+  // Create order for products
+  const createOrderForProducts = async (rl) => {
+    console.log("Fetching products...");
+    const products = await Product.find({}).populate("supplier");
 
-      try {
-        const savedSupplier = await newSupplier.save();
-        console.log("New supplier added successfully:", savedSupplier);
-        callback(savedSupplier); // Proceed to callback with the new supplier
-      } catch (error) {
-        console.error("Error adding new supplier:", error);
-        app(rl);
-      }
+    products.forEach((product, index) => {
+      console.log(
+        `${index + 1}: ${product.name} - Price: ${product.price}, Stock: ${
+          product.stock
+        }`
+      );
     });
+
+    rl.question(
+      "Choose a product by entering the number: ",
+      async (productNumber) => {
+        const productIndex = parseInt(productNumber, 10) - 1;
+
+        if (productIndex >= 0 && productIndex < products.length) {
+          const selectedProduct = products[productIndex];
+
+          rl.question("Enter quantity: ", async (quantity) => {
+            const orderQuantity = parseInt(quantity, 10);
+            // Check for discount eligibility
+            const priceAdjustmentFactor = orderQuantity > 10 ? 0.9 : 1; // 10% discount if more than 10
+            const totalPrice =
+              selectedProduct.price * orderQuantity * priceAdjustmentFactor;
+
+            if (orderQuantity > 0 && orderQuantity <= selectedProduct.stock) {
+              const totalPrice = orderQuantity * selectedProduct.price;
+              // Apply a discount if the order quantity is more than 10
+              const finalPrice =
+                orderQuantity > 10 ? totalPrice * 0.9 : totalPrice;
+
+              const order = new SalesOrder({
+                product: selectedProduct._id,
+                quantity: orderQuantity,
+                status: "pending", // Default status pending
+                totalPrice: finalPrice,
+              });
+
+              await order.save();
+              console.log(
+                `Order for ${orderQuantity} x ${
+                  selectedProduct.name
+                } at total price $${finalPrice.toFixed(
+                  2
+                )} created successfully.`
+              );
+            } else {
+              console.log(
+                "Invalid quantity. Ensure it does not exceed available stock."
+              );
+            }
+            app();
+          });
+        } else {
+          console.log("Invalid product selection.");
+          app();
+        }
+      }
+    );
+  };
+
+  // Create order for offers
+  const createOfferOrder = async (rl) => {
+    console.log("Fetching active offers...");
+    const offers = await Offer.find({ active: true }).populate("products");
+
+    offers.forEach((offer, index) => {
+      console.log(
+        `${index + 1}: Offer Price: ${
+          offer.price
+        } - Products in Offer: ${offer.products.map((p) => p.name).join(", ")}`
+      );
+    });
+
+    rl.question(
+      "Choose an offer by entering the number: ",
+      async (offerNumber) => {
+        const offerIndex = parseInt(offerNumber, 10) - 1;
+
+        if (offerIndex >= 0 && offerIndex < offers.length) {
+          const selectedOffer = offers[offerIndex];
+
+          rl.question("Enter quantity: ", async (quantity) => {
+            const orderQuantity = parseInt(quantity, 10);
+            if (orderQuantity > 0) {
+              const order = new SalesOrder({
+                offer: selectedOffer._id,
+                quantity: orderQuantity,
+                status: "pending",
+              });
+
+              await order.save();
+              console.log(
+                `Order for ${orderQuantity} x [Offer Price: ${selectedOffer.price}] created successfully.`
+              );
+            } else {
+              console.log("Invalid quantity.");
+            }
+            app();
+          });
+        } else {
+          console.log("Invalid offer selection.");
+          app();
+        }
+      }
+    );
+  };
+
+  // Ship orders
+  const shipOrders = async () => {};
+
+  // Add a new supplier
+  const addSupplier = async (supplierName, rl, callback) => {
+    rl.question(
+      `Enter the e-mail address for ${supplierName}: `,
+      async (contact) => {
+        const newSupplier = new Supplier({
+          name: supplierName,
+          contact,
+        });
+
+        try {
+          const savedSupplier = await newSupplier.save();
+          console.log("New supplier added successfully:", savedSupplier);
+          callback(savedSupplier); // Proceed to callback with the new supplier
+        } catch (error) {
+          console.error("Error adding new supplier:", error);
+          app(rl);
+        }
+      }
+    );
   };
 
   // View suppliers
@@ -470,11 +507,9 @@ const viewOffersBasedOnStock = async () => {
     rl.question("Make a choice by entering a number: ", (input) => {
       switch (parseInt(input)) {
         case 1:
-          console.log("You chose option 1.");
           addCategory(rl);
           break;
         case 2:
-          console.log("You chose option 2.");
           addProduct(rl);
           break;
         case 3:
@@ -484,37 +519,33 @@ const viewOffersBasedOnStock = async () => {
           viewBySupplier();
           break;
         case 5:
-          console.log("You chose option 5.");
           viewOffersWithinPriceRange(rl);
           break;
         case 6:
-          console.log("You chose option 6.");
           viewOffersByCategory(rl);
           break;
         case 7:
-          console.log("You chose option 7.");
           viewOffersBasedOnStock();
           break;
         case 8:
-          console.log("You chose option 8.");
           createOrderForProducts(rl);
           break;
         case 9:
-          console.log("You chose option 9.");
           createOfferOrder(rl);
           break;
         case 10:
-          console.log("You chose option 10.");
           app();
           break;
         case 11:
-          console.log("You chose option 11 to add a new supplier.");
-          rl.question("Enter the name of the new supplier: ", (supplierName) => {
-            addSupplier(supplierName, rl, () => {
-              console.log("Supplier added to database");
-              app(rl);
-            });
-          });
+          rl.question(
+            "Enter the name of the new supplier: ",
+            (supplierName) => {
+              addSupplier(supplierName, rl, () => {
+                console.log("Supplier added to database");
+                app(rl);
+              });
+            }
+          );
           break;
         case 12:
           viewSuppliers();
