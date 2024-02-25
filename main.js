@@ -188,8 +188,7 @@ async function run() {
               console.log("Included products:");
               offer.products.forEach((product, productIndex) => {
                 console.log(
-                  `\tProduct ${productIndex + 1}: Name - ${
-                    product.name
+                  `\tProduct ${productIndex + 1}: Name - ${product.name
                   }, Category - ${product.category}, Price - ${product.price}`
                 );
               });
@@ -231,14 +230,12 @@ async function run() {
           );
           offers.forEach((offer, index) => {
             console.log(
-              `Offer ${index + 1}: Price - ${offer.price}, Active - ${
-                offer.active ? "Yes" : "No"
+              `Offer ${index + 1}: Price - ${offer.price}, Active - ${offer.active ? "Yes" : "No"
               }`
             );
             offer.products.forEach((product, productIndex) => {
               console.log(
-                `\tProduct ${productIndex + 1}: Name - ${
-                  product.name
+                `\tProduct ${productIndex + 1}: Name - ${product.name
                 }, Category - ${product.category}, Price - ${product.price}`
               );
             });
@@ -256,35 +253,44 @@ async function run() {
   const viewOffersBasedOnStock = async () => {
     const offers = await Offer.find().populate("products");
 
-    let allInStock = 0,
-      someInStock = 0,
-      noneInStock = 0;
+    let allInStockOffers = [],
+      someInStockOffers = [],
+      noneInStockOffers = [];
 
-    offers.forEach((offer, index) => {
+    offers.forEach((offer) => {
       const productStocks = offer.products.map((product) => product.stock);
-      const totalStock = productStocks.reduce((acc, stock) => acc + stock, 0);
-      const fullyStocked = productStocks.every((stock) => stock === 200);
+      const fullyStocked = productStocks.every((stock) => stock > 0);
       const outOfStock = productStocks.every((stock) => stock === 0);
-      const someStock = productStocks.some((stock) => stock > 0 && stock < 200);
+      const someStock = productStocks.some((stock) => stock > 0) && productStocks.some((stock) => stock === 0);
 
       if (fullyStocked) {
-        allInStock++;
+        allInStockOffers.push(offer);
       } else if (outOfStock) {
-        noneInStock++;
+        noneInStockOffers.push(offer);
       } else if (someStock) {
-        someInStock++;
+        someInStockOffers.push(offer);
       }
-
-      console.log(
-        `Offer ${index + 1}: Total stock available is ${totalStock}.`
-      );
     });
 
-    console.log(`Offers with all products in stock: ${allInStock}`);
-    console.log(`Offers with some products in stock: ${someInStock}`);
-    console.log(`Offers with no products in stock: ${noneInStock}`);
+    console.log(`Offers with all products in stock: ${allInStockOffers.length}`);
+    allInStockOffers.forEach((offer, index) => {
+      console.log(`Offer ${index + 1} with all products in stock:`, offer);
+    });
+
+    console.log(`Offers with some products in stock: ${someInStockOffers.length}`);
+    someInStockOffers.forEach((offer, index) => {
+      console.log(`Offer ${index + 1} with some products in stock:`, offer);
+    });
+
+    console.log(`Offers with no products in stock: ${noneInStockOffers.length}`);
+    noneInStockOffers.forEach((offer, index) => {
+      console.log(`Offer ${index + 1} with no products in stock:`, offer);
+    });
+
+
     app();
   };
+
 
   // Create order for products
   const createOrderForProducts = async (rl) => {
@@ -293,8 +299,7 @@ async function run() {
 
     products.forEach((product, index) => {
       console.log(
-        `${index + 1}: ${product.name} - Price: ${product.price}, Stock: ${
-          product.stock
+        `${index + 1}: ${product.name} - Price: ${product.price}, Stock: ${product.stock
         }`
       );
     });
@@ -329,8 +334,7 @@ async function run() {
 
               await order.save();
               console.log(
-                `Order for ${orderQuantity} x ${
-                  selectedProduct.name
+                `Order for ${orderQuantity} x ${selectedProduct.name
                 } at total price $${finalPrice.toFixed(
                   2
                 )} created successfully.`
@@ -357,8 +361,7 @@ async function run() {
 
     offers.forEach((offer, index) => {
       console.log(
-        `${index + 1}: Offer Price: ${
-          offer.price
+        `${index + 1}: Offer Price: ${offer.price
         } - Products in Offer: ${offer.products.map((p) => p.name).join(", ")}`
       );
     });
