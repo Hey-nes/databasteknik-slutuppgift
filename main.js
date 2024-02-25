@@ -398,7 +398,47 @@ async function run() {
   };
 
   // Ship orders
-  const shipOrders = async () => {};
+  const shipOrders = async () => {
+    try {
+      const pendingOrders = await SalesOrder.find({
+        status: "pending",
+      }).populate({
+        path: "offer",
+        populate: {
+          path: "products",
+          model: "Product",
+        },
+      });
+
+      if (pendingOrders.length === 0) {
+        console.log("No pending orders to ship.");
+        app();
+        return;
+      }
+
+      for (const order of pendingOrders) {
+        // Mark the order as shipped
+        order.status = "shipped";
+        await order.save();
+
+        for (const product of order.offer.products) {
+          product.stock -= order.quantity;
+          await product.save();
+        }
+
+        for (const product of order.offer.products) {
+          product.stock -= order.quantity;
+          await product.save();
+        }
+      }
+
+      console.log("All pending orders have been shipped successfully.");
+    } catch (error) {
+      console.error("Error shipping orders:", error);
+    } finally {
+      app();
+    }
+  };
 
   // Add a new supplier
   const addSupplier = async (supplierName, rl, callback) => {
@@ -483,6 +523,83 @@ async function run() {
     }
   };
 
+  // View sum of profits
+  const viewSumOfProfits = async () => {
+    try {
+      let totalProfit = 0;
+
+      const salesOrders = await SalesOrder.find({}).populate({
+        path: "offer",
+        populate: {
+          path: "products",
+          model: "Product",
+        },
+      });
+
+      salesOrders.forEach((order) => {
+        let totalRevenue = 0;
+        let totalCOGS = 0;
+
+        if (order.offer) {
+          order.offer.products.forEach((product) => {
+            totalRevenue += product.price;
+            totalCOGS += product.cost;
+          });
+        }
+
+        const profit = totalRevenue - totalCOGS;
+        totalProfit += profit;
+      });
+
+      console.log(`Total profit from sales orders: ${totalProfit}$`);
+
+      rl.question(
+        "Enter the name of a product to view profits from offers containing it: ",
+        async (productName) => {
+          try {
+            const product = await Product.findOne({ name: productName });
+
+            if (!product) {
+              console.log("Product not found.");
+              app();
+              return;
+            }
+
+            const offersContainingProduct = await Offer.find({
+              products: product._id,
+            }).populate("products");
+
+            let productOffersProfit = 0;
+
+            offersContainingProduct.forEach((offer) => {
+              let offerRevenue = 0;
+              let offerCOGS = 0;
+
+              offer.products.forEach((offerProduct) => {
+                offerRevenue += offer.price;
+                offerCOGS += offerProduct.cost;
+              });
+
+              const offerProfit = offerRevenue - offerCOGS;
+              productOffersProfit += offerProfit;
+            });
+
+            console.log(
+              `Total profit from offers containing ${productName}: ${productOffersProfit}$`
+            );
+          } catch (error) {
+            console.error("Error calculating profits:", error);
+          } finally {
+            app();
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Error retrieving sales orders:", error);
+      app();
+    }
+  };
+
   const app = () => {
     console.log("Menu:");
     console.log("1. Add new category");
@@ -534,7 +651,7 @@ async function run() {
           createOfferOrder(rl);
           break;
         case 10:
-          app();
+          shipOrders();
           break;
         case 11:
           rl.question(
@@ -554,8 +671,7 @@ async function run() {
           viewSalesOrders();
           break;
         case 14:
-          console.log("You chose option 14.");
-          app();
+          viewSumOfProfits();
           break;
       }
     });
